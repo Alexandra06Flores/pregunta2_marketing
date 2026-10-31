@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>Nueva campaña</h2>
+  <form method="post" enctype="multipart/form-data" id="new-form">
+    <label for="business_name">Nombre del negocio</label>
+    <input type="text" id="business_name" name="business_name" maxlength="100" required value="{{ request.form.get('business_name', '') }}">
+
+    <label for="industry">Rubro</label>
+    <input type="text" id="industry" name="industry" maxlength="100" placeholder="Ej: panadería, ropa, restaurante" required value="{{ request.form.get('industry', '') }}">
+
+    <label for="notes">Notas para la IA (opcional)</label>
+    <textarea id="notes" name="notes" maxlength="500" placeholder="Ej: público joven, tono divertido, promoción del fin de semana">{{ request.form.get('notes', '') }}</textarea>
+
+    <label for="photo">Foto del producto o local (JPG, PNG o WEBP, máximo 8 MB)</label>
+    <input type="file" id="photo" name="photo" accept="image/png,image/jpeg,image/webp" required>
+
+    <p class="muted">La foto se analiza con un modelo de visión de Groq para proponer los guiones. Puede tardar unos segundos.</p>
+    <button type="submit" id="new-btn">Proponer 3 guiones</button>
+  </form>
+</div>
+<script>
+  document.getElementById('new-form').addEventListener('submit', function () {
+    var b = document.getElementById('new-btn');
+    b.disabled = true; b.textContent = 'Analizando la foto...';
+  });
+</script>
+{% endblock %}

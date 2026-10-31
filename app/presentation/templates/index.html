@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>Campañas de marketing con IA</h2>
+  <p>Sube la foto de un producto o local, la IA propone 3 guiones, eliges uno y el sistema genera 3 fotos y un video listos para redes sociales.</p>
+  <a class="btn" href="{{ url_for('main.new') }}">Crear nueva campaña</a>
+</div>
+<div class="card">
+  <h3>Campañas creadas</h3>
+  <table>
+    <tr><th>Negocio</th><th>Rubro</th><th>Estado</th><th>Creada</th><th></th></tr>
+    {% for c in campaigns %}
+    <tr>
+      <td>{{ c.business_name }}</td>
+      <td>{{ c.industry }}</td>
+      <td><span class="badge">{{ STATUS_LABELS.get(c.status, c.status) }}</span></td>
+      <td>{{ c.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+      <td><a href="{{ url_for('main.campaign', cid=c.id) }}">Abrir</a></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5">Aún no hay campañas.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block content %}
+{% set st = campaign.status %}
+<h2>{{ campaign.business_name }} <span class="badge">{{ STATUS_LABELS.get(st, st) }}</span></h2>
+
+<div class="steps">
+  <span class="step done">1. Foto</span>
+  <span class="step done">2. Guiones</span>
+  <span class="step {{ 'done' if campaign.chosen_script_id else '' }}">3. Guion elegido</span>
+  <span class="step {{ 'done' if st in ['material_listo', 'publicado_simulado'] else '' }}">4. Fotos y video</span>
+  <span class="step {{ 'done' if st == 'publicado_simulado' else '' }}">5. Publicación (simulada)</span>
+</div>
+
+<div class="card row">
+  <div class="col photo">
+    <img src="{{ url_for('main.media', filename=campaign.photo_file) }}" alt="Foto original">
+  </div>
+  <div class="col">
+    <h3>Foto original</h3>
+    <p><b>Rubro:</b> {{ campaign.industry }}</p>
+    {% if campaign.notes %}<p><b>Notas:</b> {{ campaign.notes }}</p>{% endif %}
+    <p><b>Lo que la IA ve en la foto:</b> {{ campaign.photo_description }}</p>
+  </div>
+</div>
+
+<div class="card">
+  <h3>Guiones propuestos por la IA</h3>
+  <div class="grid3 scripts">
+    {% for s in scripts %}
+    <div class="card {{ 'chosen' if s.id == campaign.chosen_script_id else '' }}">
+      <h4>{{ s.position }}. {{ s.title }}</h4>
+      <p><b>Gancho:</b> {{ s.hook }}</p>
+      <p>{{ s.body }}</p>
+      <p><b>Llamado a la acción:</b> {{ s.cta }}</p>
+      <p class="muted"><b>Escenas:</b></p>
+      <ol class="muted">
+        {% for sc in s.scenes %}<li>{{ sc.overlay_text }}</li>{% endfor %}
+      </ol>
+      {% if s.id == campaign.chosen_script_id %}
+        <span class="badge badge-ia">Guion elegido</span>
+      {% elif st in ['guiones_listos', 'guion_elegido'] %}
+        <form method="post" action="{{ url_for('main.choose', cid=campaign.id, sid=s.id) }}">
+          <button type="submit">Elegir este guion</button>
+        </form>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+{% if campaign.chosen_script_id and st == 'guion_elegido' %}
+<div class="card">
+  <h3>Generar fotos y video</h3>
+  <p>Se crean 3 fotos con IA (una por escena) y un video vertical de 12 segundos. Puede tardar entre 1 y 3 minutos, no cierres la página.</p>
+  <form method="post" action="{{ url_for('main.generate', cid=campaign.id) }}" id="gen-form">
+    <button type="submit" id="gen-btn">Generar fotos y video</button>
+  </form>
+</div>
+<script>
+  document.getElementById('gen-form').addEventListener('submit', function () {
+    var b = document.getElementById('gen-btn');
+    b.disabled = true; b.textContent = 'Generando... esto toma un par de minutos';
+  });
+</script>
+{% endif %}
+
+{% if video %}
+<div class="card">
+  <h3>Material generado</h3>
+  <div class="grid3 imgs">
+    {% for im in images %}
+    <div>
+      <img src="{{ url_for('main.media', filename=im.file) }}" alt="Foto {{ im.position }}">
+      <p>
+        <span class="badge {{ 'badge-ia' if im.source == 'ia' else 'badge-warn' }}">
+          {{ 'Generada con IA' if im.source == 'ia' else 'Imagen de respaldo (el servicio de IA no respondió)' }}
+        </span>
+      </p>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="row" style="margin-top:20px">
+    <div class="col">
+      <h4>Video</h4>
+      <video controls src="{{ url_for('main.media', filename=video.file) }}"></video>
+    </div>
+    <div class="col">
+      <h4>Verificación técnica del video</h4>
+      <ul>
+        {% for text, ok in checks %}
+        <li class="{{ 'check-ok' if ok else 'check-bad' }}">{{ '✔' if ok else '✘' }} {{ text }}</li>
+        {% endfor %}
+      </ul>
+      <p class="muted">Texto de la publicación:</p>
+      {% for s in scripts if s.id == campaign.chosen_script_id %}<p>{{ s.caption }}</p>{% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h3>Publicar en redes sociales</h3>
+  <div class="sim">Modo simulado: la aplicación registra la publicación, pero NO envía nada a Instagram ni a TikTok.</div>
+  <form method="post" action="{{ url_for('main.publish', cid=campaign.id) }}">
+    <label for="network">Red social</label>
+    <select id="network" name="network" style="max-width:260px">
+      {% for n in NETWORKS %}<option value="{{ n }}">{{ n }}</option>{% endfor %}
+    </select>
+    <p><button type="submit">Publicar (simulado)</button></p>
+  </form>
+
+  {% if posts %}
+  <h4>Publicaciones registradas</h4>
+  <table>
+    <tr><th>Red</th><th>Estado</th><th>ID</th><th>Fecha</th></tr>
+    {% for p in posts %}
+    <tr>
+      <td>{{ p.network }}</td>
+      <td><span class="badge badge-warn">{{ p.status }}</span></td>
+      <td>{{ p.external_id }}</td>
+      <td>{{ p.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}
