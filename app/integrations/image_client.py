@@ -16,21 +16,26 @@ def _size():
 
 
 def _from_ai(prompt, dest_path, seed):
+    """Pide la imagen a Pollinations.
+
+    Sin clave usa la API clasica gratuita (sin registro, con una marca pequena de Pollinations).
+    Con POLLINATIONS_API_KEY usa la API con cuenta (enter.pollinations.ai), que consume el saldo "pollen".
+    """
     width, height = _size()
-    base = os.getenv("IMAGE_API_URL", "https://image.pollinations.ai/prompt").rstrip("/")
     full_prompt = f"{prompt}, vertical composition, professional advertising photo, no text, no watermark"
-    url = f"{base}/{quote(full_prompt, safe='')}"
-    params = {
-        "width": width,
-        "height": height,
-        "seed": seed,
-        "nologo": "true",
-        "model": os.getenv("IMAGE_MODEL", "flux"),
-    }
-    headers = {}
     key = os.getenv("POLLINATIONS_API_KEY", "").strip()
+
+    params = {"width": width, "height": height, "seed": seed}
+    headers = {}
     if key:
+        base = "https://gen.pollinations.ai/image"
         headers["Authorization"] = f"Bearer {key}"
+    else:
+        base = "https://image.pollinations.ai/prompt"
+    model = os.getenv("POLLINATIONS_MODEL", "").strip()
+    if model:
+        params["model"] = model
+    url = f"{base}/{quote(full_prompt, safe='')}"
 
     last = None
     for attempt in range(3):
@@ -39,8 +44,13 @@ def _from_ai(prompt, dest_path, seed):
             if resp.status_code == 200 and resp.headers.get("content-type", "").startswith("image/"):
                 img = Image.open(io.BytesIO(resp.content)).convert("RGB")
                 img.save(dest_path, "JPEG", quality=90)
+                time.sleep(3)  # pausa corta entre imagenes para no saturar el servicio gratuito
                 return True
             last = f"HTTP {resp.status_code}"
+            if resp.status_code in (401, 402, 403):
+                # Problema de clave o saldo: reintentar no sirve
+                last += " (se requiere clave o saldo: ver POLLINATIONS_API_KEY)"
+                break
         except (requests.RequestException, OSError) as e:
             last = str(e)
         time.sleep(3 * (attempt + 1))

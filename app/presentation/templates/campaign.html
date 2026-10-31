@@ -85,6 +85,17 @@
       <video controls src="{{ url_for('main.media', filename=video.file) }}"></video>
     </div>
     <div class="col">
+      {% if st == 'material_listo' %}
+      <form method="post" action="{{ url_for('main.generate', cid=campaign.id) }}" id="regen-form" style="margin-bottom:14px">
+        <button type="submit" id="regen-btn" class="btn-light" style="background:#e4e6f5;color:#1b1464">Volver a generar fotos y video</button>
+      </form>
+      <script>
+        document.getElementById('regen-form').addEventListener('submit', function () {
+          var b = document.getElementById('regen-btn');
+          b.disabled = true; b.textContent = 'Generando... esto toma un par de minutos';
+        });
+      </script>
+      {% endif %}
       <h4>Verificación técnica del video</h4>
       <ul>
         {% for text, ok in checks %}
